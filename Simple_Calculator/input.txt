@@ -1,0 +1,22 @@
+M R1 0x6
+M R2 0x9
+M R3 R1
+M R4 R2
+C R4 R3
+B 0xA
+M R5 R3
+M R3 R4
+M R4 R5
+/ R3 R4
+* R4 R0
+- R3 R0
+M R5 R0
+C R5 0x0
+B 0x16
+M R3 R4
+M R4 R5
+C 0x0 R4
+B 0xA
+* R1 R2
+/ R0 R3
+H
