@@ -2,7 +2,7 @@
 
 ## Description
  본 프로젝트는 Von Neumann architecture을 기반으로 한 Computing Model을 개발하는 프로젝트이다. 이 Computing Model은 기본적인 사칙연산 뿐만 아니라 내부 명령어인 M, C, J, B, H를 사용하여 간단한 연산과 레지스터의 동작을 수행할 수 있는 프로그램이다. 
- 이번 프로젝트의 목표는 이 프로그램을 구현하면서 컴퓨터 내부 동작에 대해 이해를 하고 구현한 프로그램을 바탕으로 여러 연산을 수행해보면서 Von Neumann architecture와 ISA Model에 대해 이해하는 것입니다.
+ 이번 프로젝트의 목표는 이 프로그램을 구현하면서 컴퓨터 내부 동작에 대해 이해를 하고 구현한 프로그램을 바탕으로 여러 연산을 수행해보면서 Von Neumann architecture와 ISA Model에 대해 이해하는 것이다.
  
 ## Requirements
 - input.txt에 필요한 연산을 작성한 후, 그 파일을 읽어들이면서 시작한다.
