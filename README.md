@@ -1,3 +1,7 @@
+# Index
+- [Simple Calculator](#Simple-Calculator)
+- [Single Cycle-MIPS](#Single-Cycle-MIPS)
+
 # Simple Calculator
 
 ## Description
@@ -59,3 +63,53 @@
   - 흐름 제어 명령어 'H'는 H 하나만 가능.
 - '/' 연산 수행 시, Operand2가 0일 경우 0으로 나눌 수 없음에 대한 에러 메시지 출력 후 해당 연산을 종료한다.
 - 흐름 제어 명령어 'J'와 'B' 실행 시 Operand1이 input.txt의 size, 즉, 파일의 라인 개수보다 크면 해당 라인으로 JUMP가 불가능 하므로 에러 메시지 출력 후 프로그램을 종료한다.
+<br><br>
+
+# Single Cycle MIPS
+
+## Description
+ 본 프로젝트는 간단한 ISA를 가진 MIPS 시뮬레이터 프로그램을 구현하는 프로젝트이다. 이 프로그램은 input으로 들어온 실행 가능한 binary 파일의 각 명령어들을 해석하여 해당 소스코드의 결과와 동일한 결과를 얻는 것이 목표이다. 이 시뮬레이터에 포함된 ISA는 MIPS Green Sheet 의 CORE INSTRUCTION SET의 31개의 명령어 중 6개의 명령어(lbu, lhu, ll, sb, sc, sh)를 제외한 25개의 명령어와 JALR(Jump And Link using Register)이다. 각각의 명령어는 Single-Cycle MIPS를 따라 IF(Instruction Fetch), ID(Instruction Decode), EXE(EXEcution), MEM(MEMory access), WB(Write Back)의 다섯 단계를 거치는데, 이것은 실제 CPU와 동일하게 작동해야 한다. 본 프로젝트를 통해 컴퓨터 내부 동작과 Single Cycle에 대해 이해하는 것이 목표이다.
+ 
+## Requirements
+- MIPS binary program(input 디렉토리의 .bin파일)을 input(실행 파일의 인자)으로 한다.
+- 실제 CPU 동작과 동일하게 구현해야 한다.
+  - 레지스터 : R[0] ~ R[31]까지 존재하며 LR(R[31])과 SP(R[29])를 제외한 모든 레지스터는 0으로 초기화되어야 한다. LR과 SP의 초기값은 각각 0xFFFF:FFFF, 0x100:0000이다.
+  - 메모리 : 메모리는 16MB이다. 단, Instruction memory와 data memory를 하나의 메모리로 구현한다.
+  - PC : PC는 현재 명령어의 주소를 가지고 있는 레지스터로, 초기값은 프로그램의 시작주소인 0x0 이다. 각 명령어에 대응하여 PC는 0x0 부터 4씩 증가하며 PC가 0xFFFF:FFFF일 때 프로그램이 종료된다.
+- 각 사이클마다 아키텍쳐 상태의 변화가 생긴다면 user visible architectural state인 PC, GPR, Memory에 대한 상태를 출력해야 한다.
+- 명령어가 전부 실행되면, 다음과 같은 값들을 출력해야합니다.
+	 - 최종 결과값 (R[2])
+	 - 명령어 실행 횟수
+	 - R-type 명령어 실행 횟수
+	 - I-type 명령어 실행 횟수
+	 - J-type 명령어 실행 횟수
+	 - 메모리 액세스 명령어 실행 횟수
+	 - branch 명령어 실행한 횟수
+
+## Single-Cycle
+- 명령어 하나 당 하나의 사이클이 돌아야 한다.
+- OPCODE에 따라 Control Signals를 구한 후 MUX의 개념을 이용하여 Signal에 따라 각 명령어가 필요로 하는 단계에만 접근 가능하게 한다.
+- JALR (Jump And Link using Register) 명령어를 구현해야 한다.
+	 - rd에 리턴할 주소값을 저장하고 rs로 점프하는 R-type 명령어입니다.
+	 - rd = 31, rs = 점프 타겟 레지스터, funct = 0x9, 나머지는 0입니다.
+	 - JALR 명령어를 16진수로 하면 0x0?!0f809 입니다. 이때 '?'와 '!'는 미지수로 범위는 		다음과 같습니다. 
+		 - 0 <= ? <= 3
+		 - 0 <= ! <= E
+
+## Environment
+- 사용 언어 : C
+- 개발 환경 : Linux
+- 파일 정보 : src/main.c src/fetch.c src/decode.c src/execute.c src/memory_access.c src/write_back.c src/MUX.c src/single_cycle.h
+
+## How to Compile
+1. git clone을 하여 소스파일이 모두 있는 디렉토리(src)에 위치한다.
+4. gcc -Wall -Wextra -Werror *.c -o single_cycle 를 입력하여 컴파일한다.
+4-1) 옵션을 추가해준 이유는 모호한 코딩에 대한 경고와 모든 경고에 대해 컴파일 에러를 처리하여 더욱 완성도 있는 코드를 증명하기 위함이다.
+5. 컴파일이 잘 되었다면 single_cycle 실행 파일이 생성되었을 것이다. ./single_cycle에 원하는 input 디렉토리의 binary 파일명을 입력하여 실행한 후, 결과를 확인한다.
+
+## Exception Handling
+- input 파일을 불러오지 못하거나 빈 파일이라면 에러 메시지 출력 후 프로그램을 종료한다.
+- 명령어를 decode 할 때, opcode가 정해진 format이 아니라면 에러 메시지 출력
+![image](https://user-images.githubusercontent.com/70425484/124956708-3588d780-e053-11eb-90a9-b00ab4f4e6a3.png)
+
+<br><br>
