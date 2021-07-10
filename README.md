@@ -1,6 +1,7 @@
 # Index
 - [Simple Calculator](#Simple-Calculator)
 - [Single Cycle-MIPS](#Single-Cycle-MIPS)
+- [MIPS Pipeline](#MIPS-Pipeline)
 
 # Simple Calculator
 
@@ -103,9 +104,9 @@
 
 ## How to Compile
 1. git clone을 하여 소스파일이 모두 있는 디렉토리(src)에 위치한다.
-4. gcc -Wall -Wextra -Werror *.c -o single_cycle 를 입력하여 컴파일한다.
-4-1) 옵션을 추가해준 이유는 모호한 코딩에 대한 경고와 모든 경고에 대해 컴파일 에러를 처리하여 더욱 완성도 있는 코드를 증명하기 위함이다.
-5. 컴파일이 잘 되었다면 single_cycle 실행 파일이 생성되었을 것이다. ./single_cycle에 원하는 input 디렉토리의 binary 파일명을 입력하여 실행한 후, 결과를 확인한다.
+2. gcc -Wall -Wextra -Werror *.c -o single_cycle 를 입력하여 컴파일한다.
+2-1) 옵션을 추가해준 이유는 모호한 코딩에 대한 경고와 모든 경고에 대해 컴파일 에러를 처리하여 더욱 완성도 있는 코드를 증명하기 위함이다.
+3. 컴파일이 잘 되었다면 single_cycle 실행 파일이 생성되었을 것이다. ./single_cycle에 원하는 input 디렉토리의 binary 파일명을 입력하여 실행한 후, 결과를 확인한다.
 
 ## Exception Handling
 - input 파일을 불러오지 못하거나 빈 파일이라면 에러 메시지 출력 후 프로그램을 종료한다.
@@ -113,3 +114,49 @@
 ![image](https://user-images.githubusercontent.com/70425484/124956708-3588d780-e053-11eb-90a9-b00ab4f4e6a3.png)
 
 <br><br>
+# MIPS Pipeline
+
+## Description
+ 본 프로젝트는 파이프라인을 이용하여 더 효율적인 성능을 가진 MIPS 시뮬레이터를 구현하는 프로젝트이다. 이 프로그램은 input으로 들어온 실행 가능한 binary 파일의 각 명령어들을 해석하여 해당 소스코드의 결과와 동일한 결과를 얻는 것이 목표이다. 이 시뮬레이터에 포함된 ISA는 MIPS Green Sheet 의 CORE INSTRUCTION SET의 31개의 명령어 중 6개의 명령어(lbu, lhu, ll, sb, sc, sh)를 제외한 25개의 명령어이다. 각각의 명령어는 Single-Cycle MIPS를 따라 IF(Instruction Fetch), ID(Instruction Decode), EXE(EXEcution), MEM(MEMory access), WB(Write Back)의 다섯 단계를 거치는데, 이것은 실제 CPU와 동일하게 작동해야 한다. 또한, 파이프라인에 의하여 연속적으로 명령어를 실행하는 sequential execution을 따라야하고 명령어간의 dependency를 파악하여 그것을 해결할 수 있어야 한다. 본 프로젝트를 통해 컴퓨터 내부 동작과 파이프라인, 명령어간의 dependency에 대해 이해하는 것이 목표이다.
+ 
+## Requirements
+- MIPS binary program(input 디렉토리의 .bin파일)을 input(실행 파일의 인자)으로 한다.
+- 실제 CPU 동작과 동일하게 구현해야 한다.
+  - 레지스터 : R[0] ~ R[31]까지 존재하며 LR(R[31])과 SP(R[29])를 제외한 모든 레지스터는 0으로 초기화되어야 한다. LR과 SP의 초기값은 각각 0xFFFF:FFFF, 0x100:0000이다.
+  - 메모리 : 메모리는 16MB이다. 단, Instruction memory와 data memory를 하나의 메모리로 구현한다.
+  - PC : PC는 현재 명령어의 주소를 가지고 있는 레지스터로, 초기값은 프로그램의 시작주소인 0x0 이다. 각 명령어에 대응하여 PC는 0x0 부터 4씩 증가하며 PC가 0xFFFF:FFFF일 때 프로그램이 종료된다.
+- 각 사이클마다 아키텍쳐 상태의 변화가 생긴다면 user visible architectural state인 PC, GPR, Memory에 대한 상태를 출력해야 한다.
+- 명령어가 전부 실행되면, 다음과 같은 값들을 출력해야합니다.
+	- 최종 결과값 (R[2])
+	- 총 사이클 횟수
+	- 명령어 실행 횟수
+	- R-type 명령어 실행 횟수
+	- I-type 명령어 실행 횟수
+	- J-type 명령어 실행 횟수
+	- 메모리 액세스 명령어 실행 횟수
+	- jump 횟수
+	- taken branch 횟수
+	- not-taken branch 횟수
+	- 예측 성공한 branch 횟수 
+	- 예측 실패한 branch 횟수
+
+## Pipeline
+- 명령어가 실행되는 동시에 다른 명령어들도 실행되는 병렬적인 구조를 구현해야 한다.
+- 각 단계에서 발생한 명령어 대한 정보를 저장하는 공간인 latch를 구현해야 한다. latch는 한 사이클이 끝날 때 마다 다음 단계로 넘겨야 하며 각 단계에서 발생한 정보를 output, 각 단계로 들어가는 정보를 input으로 하는 총 4개의 latch를 구현해야 한다.
+- 명령어들 끼리 생기는 dependency 중 data dependency와 control dependency를 해결할 수 있게 구현을 해야 한다. 
+
+## Environment
+- 사용 언어 : C
+- 개발 환경 : Linux
+- 파일 정보 : src/main.c src/fetch.c src/decode.c src/execute.c src/memory_access.c src/write_back.c src/MUX.c src/load.c src/pipeline.h
+
+## How to Compile
+1. git clone을 하여 소스파일이 모두 있는 디렉토리(src)에 위치한다.
+2. gcc -Wall -Wextra -Werror *.c -o pipeline 를 입력하여 컴파일한다.
+2-1) 옵션을 추가해준 이유는 모호한 코딩에 대한 경고와 모든 경고에 대해 컴파일 에러를 처리하여 더욱 완성도 있는 코드를 증명하기 위함이다.
+3. 컴파일이 잘 되었다면 pipeline 실행 파일이 생성되었을 것이다. ./pipeline 원하는 input 디렉토리의 binary 파일명을 입력하여 실행한 후, 결과를 확인한다.
+
+## Exception Handling
+- input 파일을 불러오지 못하거나 빈 파일이라면 에러 메시지 출력 후 프로그램을 종료한다.
+- 명령어를 decode 할 때, opcode가 정해진 format이 아니라면 에러 메시지 출력
+![image](https://user-images.githubusercontent.com/70425484/124956708-3588d780-e053-11eb-90a9-b00ab4f4e6a3.png)
