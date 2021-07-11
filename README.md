@@ -2,6 +2,7 @@
 - [Simple Calculator](#Simple-Calculator)
 - [Single Cycle-MIPS](#Single-Cycle-MIPS)
 - [MIPS Pipeline](#MIPS-Pipeline)
+- [Emulator with Cache](#MIPS-Cache)
 
 # Simple Calculator
 
@@ -160,3 +161,61 @@
 - input 파일을 불러오지 못하거나 빈 파일이라면 에러 메시지 출력 후 프로그램을 종료한다.
 - 명령어를 decode 할 때, opcode가 정해진 format이 아니라면 에러 메시지 출력
 ![image](https://user-images.githubusercontent.com/70425484/124956708-3588d780-e053-11eb-90a9-b00ab4f4e6a3.png)
+<br><br>
+# MIPS Cache
+
+## Description
+ 본 프로젝트는 캐시 메모리를 이용하여 더 효율적인 성능을 가진 MIPS 시뮬레이터를 구현하는 프로젝트이다. 이 프로그램은 input으로 들어온 실행 가능한 binary 파일의 각 명령어들을 해석하여 해당 소스코드의 결과와 동일한 결과를 얻는 것이 목표이다. 이 시뮬레이터에 포함된 ISA는 MIPS Green Sheet 의 CORE INSTRUCTION SET의 31개의 명령어 중 6개의 명령어(lbu, lhu, ll, sb, sc, sh)를 제외한 25개의 명령어이다. 각각의 명령어는 Single-Cycle MIPS를 따라 IF(Instruction Fetch), ID(Instruction Decode), EXE(EXEcution), MEM(MEMory access), WB(Write Back)의 다섯 단계를 거치는데, 이것은 실제 CPU와 동일하게 작동해야 한다. 캐시 메모리를 이용함으로써 파이프라인 혹은 싱글 사이클을 이용한 시뮬레이터 보다 메모리에 접근을 더 효율적이고 빠르게 할 수 있기 때문에 더 좋은 성능을 가진 시뮬레이터를 구현할 수 있다. 본 프로젝트를 통해 Direct-Mapped 캐시를 이해하고 캐시 사이즈에 따른 hit rate를 이용해 성능을 비교해보는 것이 목표이다.
+ 
+## Requirements
+- MIPS binary program(input 디렉토리의 .bin파일)을 input(실행 파일의 인자)으로 한다.
+- 실제 CPU 동작과 동일하게 구현해야 한다.
+  - 레지스터 : R[0] ~ R[31]까지 존재하며 LR(R[31])과 SP(R[29])를 제외한 모든 레지스터는 0으로 초기화되어야 한다. LR과 SP의 초기값은 각각 0xFFFF:FFFF, 0x100:0000이다.
+  - 메모리 : 메모리는 16MB이다. 단, Instruction memory와 data memory를 하나의 메모리로 구현한다.
+  - 캐시 메모리
+  	- Direct Mapped Cache
+  	- cache size : 256B
+  	- cache line size : 64B
+  	- Write Policy : write-back
+  - PC : PC는 현재 명령어의 주소를 가지고 있는 레지스터로, 초기값은 프로그램의 시작주소인 0x0 이다. 각 명령어에 대응하여 PC는 0x0 부터 4씩 증가하며 PC가 0xFFFF:FFFF일 때 프로그램이 종료된다.
+- 각 사이클마다 아키텍쳐 상태의 변화가 생긴다면 user visible architectural state인 PC, GPR, Memory에 대한 상태를 출력해야 한다.
+- 명령어가 전부 실행되면, 다음과 같은 값들을 출력해야합니다.
+	- 최종 결과값 (R[2])
+	- 총 사이클 횟수
+	- 명령어 실행 횟수
+	- R-type 명령어 실행 횟수
+	- I-type 명령어 실행 횟수
+	- J-type 명령어 실행 횟수
+	- 메모리 액세스 명령어 실행 횟수
+	- jump 횟수
+	- taken branch 횟수
+	- not-taken branch 횟수
+	- 예측 성공한 branch 횟수 
+	- 예측 실패한 branch 횟수
+	- 캐시에 접근한 횟수
+	- 캐시 hit한 횟수
+	- 캐시 miss한 횟수
+
+## Cache
+- Direct Mapped Cache<br>
+![image](https://user-images.githubusercontent.com/70425484/125199396-ff409780-e2a0-11eb-9e88-c8f1835da72d.png)<br>
+캐시와 메모리 간에 위 그림과 같이 mapping 되어 있는 것을 direct mapped cache 구조라고 한다. 캐시가 메모리의 특정 영역에 access 하고 싶으면 위와 같이 캐시의 한 영역이 여러 개의 memory로 공유된 형태를 띌 것이다.<br>
+ address를 받으면 우선 tag, index, offset으로 나누어 쪼갠다. index와 offset에 해당하는 캐시가 valid라면 해당 캐시의 tag와 주소의 tag를 비교하여 일치하면 hit, 일치하지 않으면 miss이다. 간단하고 빠르지만, miss가 일어날 때 같은 index에서 tag가 달라 발생하는 conflict miss가 발생할 수 있다.
+- Cache Miss : 위에서 설명한 것과 같이 tag값이 일치하지 않으면 miss 이다. 이때 miss의 종류는 다음과 같이 나눌 수 있다.
+	- Cold Miss : 처음 캐시 메모리에 접근한다면 캐시 메모리는 초기화 상태로 모두 비어있다. 비어있는 캐시 메모리에 접근할 때는 무조건 miss가 나는데 이것을 cold miss라고 한다. 
+	- Capacity Miss : 캐시 메모리의 용량이 부족하여 발생하는 miss로 접근하는 데이터의 양이 캐시의 사이즈를 넘어갈 경우 발생한다.
+	- Conflict Miss : Direct mapped cache에서는 같은 index에 다른 tag가 들어왔을 때, set associative cache에서는 set에 way가 부족하여 발생하는 miss이다. 
+- Write Policy : 데이터 변경 시 캐시 메모리와 메인 메모리에 데이터 저장 시점에 관한 정책이다.
+	- Write Through : 캐시에 쓰기 명령이 이루어질 때 마다 캐시와 메모리에 동시에 데이터를 저장하는 정책이다. 항상 메모리에 접근하기 때문에 쓰기 명령에 걸리는 시간이 길어져 효율이 낮아진다. 
+	- Write Back : 캐시에 쓰기 명령이 이루어지는 동안 캐시에만 내용을 저장하고 캐시의 내용이 제거될 때 메모리에 복사된다. 이때 dirty bit를 사용하여 잘못된 접근을 방지한다.
+	- 
+## Environment
+- 사용 언어 : C
+- 개발 환경 : Linux
+- 파일 정보 : src/main.c src/fetch.c src/decode.c src/execute.c src/memory_access.c src/write_back.c src/MUX.c src/load.c src/DMcache.c src/pipeline.h
+
+## How to Compile
+1. git clone을 하여 소스파일이 모두 있는 디렉토리(src)에 위치한다.
+2. gcc -Wall -Wextra -Werror *.c -o direct_mapped_cache 를 입력하여 컴파일한다.
+2-1) 옵션을 추가해준 이유는 모호한 코딩에 대한 경고와 모든 경고에 대해 컴파일 에러를 처리하여 더욱 완성도 있는 코드를 증명하기 위함이다.
+3. 컴파일이 잘 되었다면 direct_mapped_cache 실행 파일이 생성되었을 것이다. ./direct_mapped_cache 원하는 input 디렉토리의 binary 파일명을 입력하여 실행한 후, 결과를 확인한다.
